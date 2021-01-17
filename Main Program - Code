@@ -1,0 +1,188 @@
+# Srija Atluru
+# 6/16/2020
+import random
+from breezypythongui import EasyFrame
+
+#created a class for this game!
+class Game(EasyFrame):
+    def __init__(self):
+        self.wBank = None
+        self.prevG = []
+        self.tRemain = 3
+        self.word = None
+        self.s = 0
+        self.scrambled = None
+        self.g = None
+
+        EasyFrame.__init__(self,  title="Unscramble the Word")
+        # ADD LABEL/FIELD for the score, with rows and columns
+        self.addLabel(text="Score: ", row=0, column=3)
+        self.fields = self.addIntegerField(value=0, row=0, column=4)
+
+        # ADD LABEL/FIELD- for the scrambled part, with rows and columns
+        self.addLabel(text="Scrambled Word: ", row=0, column=0)
+        self.fieldScrambled = self.addTextField(text="", row=0, column=1)
+
+        #  ADD LABEL/FIELD - the number of tries remaining. with rows/columns. starts with 3.
+        self.addLabel(text="Tries Remaining: ", row=2, column=0)
+        self.fieldtRemain = self.addIntegerField(value=0, row=2, column=1)
+
+         # ADD LABEL/FIELD- the input of the user, with rows and columns
+        self.addLabel(text="Your Guess: ", row=1, column=0)
+        self.fieldg = self.addTextField(text="", row=1, column=1)
+
+        # Message to player after the user has guessed!
+        self.message = self.addTextField(text="", sticky="NSEW", columnspan=5, row=4, column=0)
+
+        # Buttons for the game, new game or check guess
+        self.NGButton = self.addButton(text="New Game", row=3, column=3, command=self.newG)
+        self.CGButton = self.addButton(text="Check Guess", row=3, column=0, command=self.checkguess)
+        self.files()
+
+
+
+#Checks if the files can be read and are open
+    def files(self):
+
+        import os
+        text_file_exists = os.path.exists("words.txt")
+
+        if not text_file_exists:
+            print("Error opening text file.")
+            exit()
+#load words, shuffle the words, begin game
+        self.loadfile()
+        self.randomizeWords()
+        self.newG()
+
+#open and read the file, removes commas, close the file
+    def loadfile(self):
+
+        file_in_stream = open("words.txt", 'r')
+        file_contents = file_in_stream.read()
+        file_contents = file_contents.replace(',', '')
+        self.wBank = file_contents.split()
+        file_in_stream.close()
+
+#shuffles the words
+    def randomizeWords(self):
+
+        random.shuffle(self.wBank)
+
+    def newG(self):
+        #initializes the word, shuffle's it, clear's it
+        self.setNewWord()
+        self.shuffle_letters()
+        self.tRemain = 3
+        self.prevG = []
+
+        #resets/updates
+        self.fieldg.setText("")
+        self.fieldScrambled.setText(self.scrambled)
+        self.fieldtRemain.setValue(self.tRemain)
+
+        #the check guess button and new game button are now set in place and can be used
+        self.CGButton["state"] = "normal"
+        self.NGButton["state"] = "normal"
+
+       #clears it and prints it
+        self.message.setText("")
+        print("WORD: {}".format(self.word))
+
+    def numberofgamesremain(self):
+
+        return len(self.wBank) > 0
+
+#gets another word from the file
+    def setNewWord(self):
+
+        self.word = self.wBank.pop()
+
+#Scrambles the letters of the word and then joins back to a single word, then stores it
+    def shuffle_letters(self):
+
+        word = self.word
+
+        while word == self.word:
+            word = list(self.word)
+            random.shuffle(word)
+            word = ''.join(word)
+
+        self.scrambled = word
+#checks the user's input and guess. makes sure the same guess is not entered twice.
+    def checkguess(self):
+        g = self.fieldg.getText()
+        self.fieldg.setText("")
+
+        none = len(g) == 0
+        valid = str(g).isalpha()
+        usedguess = self.guessUsed(g)
+
+#if statement to display the correct messages
+        if none:
+            self.message.setText("No Guess Entered")
+        elif not valid:
+            self.message.setText("Guesses can only have letters!")
+        elif usedguess:
+            self.message.setText("\"{}\" already tried".format(g))
+        else:
+            self.g = g
+            self.check_g()
+
+#makses the word lowercase, if the user guessed correctly, gives a message.
+    def check_g(self):
+
+        current_g = self.g.lower()
+        word = self.word.lower()
+        if current_g == word:
+            self.update_s()  # Update their score
+            self.messageBox(title="", message="Congratulations, you won!")
+            self.end_game()
+        else:
+            self.rounds()
+
+    def guessUsed(self, g):
+
+        return g.lower() in self.prevG
+
+    def r(self, g):
+
+        lower_case_guess = g.lower()
+        self.prevG.append(lower_case_guess)
+
+#gives points based on the number of letters in the word
+    def update_s(self):
+        points = len(self.word) * 10
+        self.s = self.s + points
+        self.fields.setValue(self.s)
+#subtracts try after user guesses, then clears it
+    def rounds(self):
+        self.tRemain = self.tRemain - 1
+        self.fieldg.setText("")
+#uses the user's ramining tries and updates. Gives a message once user has used all tries.
+        if self.tRemain > 0:
+            self.prevG.append(self.g)
+            self.fieldtRemain.setNumber(self.tRemain)
+            self.message.setText("The guess was incorrect. Try again!")
+        else:
+            self.messageBox(title="", message="Sorry, you didn’t win")
+            self.end_game()
+#the game had come to an end, the buttons will be disabled. used an ifstatement to display this.
+    def end_game(self):
+       if self.numberofgamesremain():
+            self.CGButton["state"] = "disabled"
+            self.message.setText("Click \"New Game\" to continue")
+
+       else:
+            self.message.setText("No Words Remaining...")
+            self.CGButton["state"] = "disabled"
+            self.NGButton["state"] = "disabled"
+
+
+def main():
+
+    Game().mainloop()
+
+
+if __name__ == '__main__':
+    main()
